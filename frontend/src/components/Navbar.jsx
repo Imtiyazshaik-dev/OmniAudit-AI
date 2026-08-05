@@ -37,6 +37,10 @@ export default function Navbar() {
   
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
+  // Active multicolor gradient pill style vs inactive style
+  const activeTabStyle = "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 text-white font-extrabold shadow-glow-indigo border border-indigo-400/40 scale-105";
+  const inactiveTabStyle = "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 font-medium";
+
   // Derive current state info from user profile
   const userStateCode = user?.stateCode || '27';
   const currentStateInfo = getStateByCode(userStateCode);
@@ -98,54 +102,46 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Navigation Links - ONLY ONE SINGLE HIGHLIGHT ACTIVE AT ANY TIME */}
+        {/* Navigation Links - MULTICOLOR INDIGO GRADIENT HIGHLIGHT FOLLOWS CLICKED TAB */}
         {!isAuthPage && (
-          <nav className="hidden md:flex items-center space-x-1 bg-zinc-900/60 p-1.5 rounded-xl border border-zinc-800/60">
+          <nav className="hidden md:flex items-center space-x-1.5 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800/80 shadow-inner">
             <Link
               to="/dashboard"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
-                isActive('/dashboard')
-                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-sans transition-all duration-200 ${
+                isActive('/dashboard') ? activeTabStyle : inactiveTabStyle
               }`}
             >
-              <BarChart3 className={`w-3.5 h-3.5 ${isActive('/dashboard') ? 'text-indigo-400' : ''}`} />
+              <BarChart3 className={`w-4 h-4 ${isActive('/dashboard') ? 'text-white' : 'text-zinc-400'}`} />
               <span>Dashboard</span>
             </Link>
 
             <Link
               to="/upload"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
-                isActive('/upload')
-                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-sans transition-all duration-200 ${
+                isActive('/upload') ? activeTabStyle : inactiveTabStyle
               }`}
             >
-              <UploadCloud className={`w-3.5 h-3.5 ${isActive('/upload') ? 'text-indigo-400' : ''}`} />
+              <UploadCloud className={`w-4 h-4 ${isActive('/upload') ? 'text-white' : 'text-zinc-400'}`} />
               <span>Upload &amp; Audit</span>
             </Link>
 
             <Link
               to="/gstr-summary"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
-                isActive('/gstr-summary')
-                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-sans transition-all duration-200 ${
+                isActive('/gstr-summary') ? activeTabStyle : inactiveTabStyle
               }`}
             >
-              <FileText className={`w-3.5 h-3.5 ${isActive('/gstr-summary') ? 'text-indigo-400' : ''}`} />
+              <FileText className={`w-4 h-4 ${isActive('/gstr-summary') ? 'text-white' : 'text-zinc-400'}`} />
               <span>GSTR Summary</span>
             </Link>
 
             <Link
               to="/history"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
-                isActive('/history')
-                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-sans transition-all duration-200 ${
+                isActive('/history') ? activeTabStyle : inactiveTabStyle
               }`}
             >
-              <History className={`w-3.5 h-3.5 ${isActive('/history') ? 'text-indigo-400' : ''}`} />
+              <History className={`w-4 h-4 ${isActive('/history') ? 'text-white' : 'text-zinc-400'}`} />
               <span>Audit History</span>
             </Link>
           </nav>
