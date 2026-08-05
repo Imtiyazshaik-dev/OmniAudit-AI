@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../api/axios';
 import { 
   FileText, 
   UploadCloud, 
@@ -29,7 +29,13 @@ export default function Navbar() {
   const [changingState, setChangingState] = useState(false);
   const dropdownRef = useRef(null);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard' || location.pathname === '/';
+    }
+    return location.pathname === path;
+  };
+  
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   // Derive current state info from user profile
@@ -95,52 +101,52 @@ export default function Navbar() {
 
         {/* Navigation Links - HIDDEN on isolated login/register pages */}
         {!isAuthPage && (
-          <nav className="hidden md:flex items-center space-x-1 bg-zinc-900/60 p-1 rounded-xl border border-zinc-800/60">
+          <nav className="hidden md:flex items-center space-x-1 bg-zinc-900/60 p-1.5 rounded-xl border border-zinc-800/60">
             <Link
               to="/dashboard"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
                 isActive('/dashboard')
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/60'
+                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
-              <BarChart3 className="w-3.5 h-3.5" />
+              <BarChart3 className={`w-3.5 h-3.5 ${isActive('/dashboard') ? 'text-indigo-400' : ''}`} />
               <span>Dashboard</span>
             </Link>
 
             <Link
               to="/upload"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
                 isActive('/upload')
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/60'
+                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
-              <UploadCloud className="w-3.5 h-3.5" />
+              <UploadCloud className={`w-3.5 h-3.5 ${isActive('/upload') ? 'text-indigo-400' : ''}`} />
               <span>Upload &amp; Audit</span>
             </Link>
 
             <Link
               to="/gstr-summary"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
                 isActive('/gstr-summary')
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/60'
+                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className={`w-3.5 h-3.5 ${isActive('/gstr-summary') ? 'text-indigo-400' : ''}`} />
               <span>GSTR Summary</span>
             </Link>
 
             <Link
               to="/history"
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold font-sans transition-all ${
                 isActive('/history')
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700/60'
+                  ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-glow-indigo'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
             >
-              <History className="w-3.5 h-3.5" />
+              <History className={`w-3.5 h-3.5 ${isActive('/history') ? 'text-indigo-400' : ''}`} />
               <span>Audit History</span>
             </Link>
           </nav>
