@@ -22,7 +22,8 @@ import {
   Trash2,
   PlusCircle,
   Server,
-  WifiOff
+  WifiOff,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -47,7 +48,6 @@ export default function DashboardView() {
 
   const fetchData = async () => {
     setLoading(true);
-    setBackendError(false);
     try {
       const [summaryRes, historyRes] = await Promise.all([
         axios.get('/api/audit/summary'),
@@ -60,6 +60,7 @@ export default function DashboardView() {
       if (Array.isArray(historyRes.data?.invoices)) {
         setRecentInvoices(historyRes.data.invoices);
       }
+      setBackendError(false);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       setBackendError(true);
@@ -71,6 +72,27 @@ export default function DashboardView() {
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  // Auto-retry polling every 5 seconds when backend is waking up
+  useEffect(() => {
+    let interval = null;
+    if (backendError) {
+      interval = setInterval(async () => {
+        try {
+          const res = await axios.get('/api/health');
+          if (res.data?.status === 'online') {
+            setBackendError(false);
+            fetchData();
+          }
+        } catch (e) {
+          // Keep polling until backend wakes up
+        }
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [backendError]);
 
   const handleAuditComplete = (newAuditData) => {
     if (newAuditData?.invoice) {
@@ -106,21 +128,21 @@ export default function DashboardView() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Backend Sleeping / Offline Banner */}
+      {/* Backend Sleeping / Auto-retry Banner */}
       {backendError && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200">
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200 animate-pulse">
           <div className="flex items-center space-x-3">
-            <WifiOff className="w-5 h-5 text-amber-400 shrink-0" />
+            <Loader2 className="w-5 h-5 text-amber-400 shrink-0 animate-spin" />
             <div>
               <span className="font-bold text-white block">Backend Server Waking Up (Render Free Tier)</span>
-              <span>Render web services automatically sleep after inactivity. It takes ~30 seconds to spin up.</span>
+              <span>Render web services automatically sleep after inactivity. Auto-retrying connection...</span>
             </div>
           </div>
           <button
             onClick={fetchData}
             className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40 transition-colors shrink-0 ml-3"
           >
-            Retry Connection
+            Retry Now
           </button>
         </div>
       )}
