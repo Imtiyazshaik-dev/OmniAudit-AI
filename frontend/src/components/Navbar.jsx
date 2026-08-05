@@ -157,11 +157,16 @@ export default function Navbar() {
           
           {!isAuthPage && (
             <>
+              {/* Dynamic Audit Invoice Button - ONLY highlights when on /upload route */}
               <Link
                 to="/upload"
-                className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-medium shadow-glow-indigo transition-all transform hover:-translate-y-0.5"
+                className={`hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive('/upload')
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-glow-indigo scale-105'
+                    : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white'
+                }`}
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+                <Sparkles className={`w-3.5 h-3.5 ${isActive('/upload') ? 'text-indigo-200' : 'text-indigo-400'}`} />
                 <span>Audit Invoice</span>
               </Link>
 
