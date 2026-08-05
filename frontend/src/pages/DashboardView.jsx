@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { 
   StatCard, 
@@ -20,29 +20,49 @@ import {
   Eye,
   RefreshCw,
   Trash2,
-  PlusCircle
+  PlusCircle,
+  Server,
+  WifiOff
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function DashboardView() {
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState(null);
+  const [metrics, setMetrics] = useState({
+    totalInvoices: 0,
+    passedCount: 0,
+    flaggedCount: 0,
+    complianceRate: 100,
+    totalSubtotal: 0,
+    totalCgst: 0,
+    totalSgst: 0,
+    totalIgst: 0,
+    totalTaxLiability: 0,
+    totalGrandTotal: 0
+  });
   const [recentInvoices, setRecentInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [backendError, setBackendError] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
+    setBackendError(false);
     try {
       const [summaryRes, historyRes] = await Promise.all([
         axios.get('/api/audit/summary'),
         axios.get('/api/audit/history?limit=5')
       ]);
 
-      setMetrics(summaryRes.data.metrics);
-      setRecentInvoices(historyRes.data.invoices);
+      if (summaryRes.data?.metrics) {
+        setMetrics(summaryRes.data.metrics);
+      }
+      if (Array.isArray(historyRes.data?.invoices)) {
+        setRecentInvoices(historyRes.data.invoices);
+      }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+      setBackendError(true);
     } finally {
       setLoading(false);
     }
@@ -53,7 +73,9 @@ export default function DashboardView() {
   }, [user]);
 
   const handleAuditComplete = (newAuditData) => {
-    setSelectedInvoice(newAuditData.invoice);
+    if (newAuditData?.invoice) {
+      setSelectedInvoice(newAuditData.invoice);
+    }
     fetchData();
   };
 
@@ -84,6 +106,25 @@ export default function DashboardView() {
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Backend Sleeping / Offline Banner */}
+      {backendError && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200">
+          <div className="flex items-center space-x-3">
+            <WifiOff className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-bold text-white block">Backend Server Waking Up (Render Free Tier)</span>
+              <span>Render web services automatically sleep after inactivity. It takes ~30 seconds to spin up.</span>
+            </div>
+          </div>
+          <button
+            onClick={fetchData}
+            className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40 transition-colors shrink-0 ml-3"
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800/80 pb-6">
         <div>
@@ -106,7 +147,7 @@ export default function DashboardView() {
         </div>
 
         <div className="flex items-center space-x-2">
-          {recentInvoices.length > 0 && (
+          {recentInvoices && recentInvoices.length > 0 && (
             <button
               onClick={handleClearAllInvoices}
               className="px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-rose-500/50 hover:bg-rose-500/10 text-rose-400 text-xs font-medium flex items-center space-x-1.5 transition-all"
@@ -201,7 +242,7 @@ export default function DashboardView() {
           </div>
 
           <div className="flex items-center space-x-3">
-            {recentInvoices.length === 0 && (
+            {(!recentInvoices || recentInvoices.length === 0) && (
               <button
                 onClick={handleSeedDemoData}
                 className="text-xs font-mono font-medium text-indigo-400 hover:text-indigo-300 flex items-center space-x-1"
@@ -221,7 +262,7 @@ export default function DashboardView() {
           </div>
         </div>
 
-        {recentInvoices.length === 0 ? (
+        {!recentInvoices || recentInvoices.length === 0 ? (
           <div className="p-8 text-center bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-3">
             <p className="text-xs text-zinc-400">Workspace is empty. No audited invoices found.</p>
             <div className="flex items-center justify-center space-x-3">
@@ -254,7 +295,7 @@ export default function DashboardView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60 text-zinc-200">
-                {recentInvoices.map((inv) => {
+                {(recentInvoices || []).map((inv) => {
                   const isPassed = inv.auditStatus === 'PASSED';
                   return (
                     <tr key={inv._id} className="hover:bg-zinc-900/40 transition-colors">
