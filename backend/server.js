@@ -9,6 +9,9 @@ import auditRoutes from './routes/auditRoutes.js';
 
 dotenv.config();
 
+// Disable Mongoose buffering so operations fail fast with descriptive errors rather than hanging for 10000ms
+mongoose.set('bufferCommands', false);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -16,6 +19,21 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// Middleware to verify database connection before handling write requests
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api') && req.path !== '/api/health') {
+    if (mongoose.connection.readyState !== 1) {
+      console.warn("⚠️ Database disconnected on request. Attempting emergency reconnection...");
+      try {
+        await initDatabase();
+      } catch (err) {
+        return res.status(503).json({ error: "Database connection temporarily unavailable. Please retry in a moment." });
+      }
+    }
+  }
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -42,11 +60,17 @@ app.use((err, req, res, next) => {
 
 // Database Connection with automatic Memory DB fallback & disk persistence
 async function initDatabase() {
+  if (mongoose.connection.readyState === 1) return;
+
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/omniaudit';
+  const isAtlas = mongoUri.includes('mongodb+srv');
 
   try {
     console.log(`🔌 Connecting to MongoDB at: ${mongoUri.replace(/:[^:@]+@/, ':***@')}`);
-    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 });
+    await mongoose.connect(mongoUri, { 
+      serverSelectionTimeoutMS: isAtlas ? 10000 : 3000,
+      connectTimeoutMS: 10000
+    });
     console.log('✅ Primary MongoDB connected successfully.');
   } catch (err) {
     console.warn(`⚠️ Could not connect to primary MongoDB (${err.message}). Starting Mongo Memory Server with persistent storage...`);
