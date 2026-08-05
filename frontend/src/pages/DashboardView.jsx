@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from '../api/axios';
+import axios, { setBackendUrl } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { 
   StatCard, 
@@ -23,7 +23,9 @@ import {
   PlusCircle,
   Server,
   WifiOff,
-  Loader2
+  Loader2,
+  Link2,
+  Check
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -45,9 +47,14 @@ export default function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [backendError, setBackendError] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  
+  // Backend URL configuration state
+  const [inputBackendUrl, setInputBackendUrl] = useState(() => localStorage.getItem('omniaudit_backend_url') || '');
+  const [urlSavedSuccess, setUrlSavedSuccess] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
+    setBackendError(false);
     try {
       const [summaryRes, historyRes] = await Promise.all([
         axios.get('/api/audit/summary'),
@@ -73,7 +80,7 @@ export default function DashboardView() {
     fetchData();
   }, [user]);
 
-  // Auto-retry polling every 5 seconds when backend is waking up
+  // Auto-retry polling every 6 seconds when backend error occurs
   useEffect(() => {
     let interval = null;
     if (backendError) {
@@ -85,14 +92,23 @@ export default function DashboardView() {
             fetchData();
           }
         } catch (e) {
-          // Keep polling until backend wakes up
+          // Keep polling until backend URL responds
         }
-      }, 5000);
+      }, 6000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [backendError]);
+
+  const handleSaveBackendUrl = (e) => {
+    e.preventDefault();
+    if (!inputBackendUrl) return;
+    setBackendUrl(inputBackendUrl);
+    setUrlSavedSuccess(true);
+    setTimeout(() => setUrlSavedSuccess(false), 3000);
+    fetchData();
+  };
 
   const handleAuditComplete = (newAuditData) => {
     if (newAuditData?.invoice) {
@@ -128,22 +144,49 @@ export default function DashboardView() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Backend Sleeping / Auto-retry Banner */}
+      {/* Backend Connection & Render URL Setup Banner */}
       {backendError && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-200 animate-pulse">
-          <div className="flex items-center space-x-3">
-            <Loader2 className="w-5 h-5 text-amber-400 shrink-0 animate-spin" />
-            <div>
-              <span className="font-bold text-white block">Backend Server Waking Up (Render Free Tier)</span>
-              <span>Render web services automatically sleep after inactivity. Auto-retrying connection...</span>
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3 text-xs text-amber-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <Server className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <span className="font-bold text-white text-sm block">Backend Connection &amp; Render URL Configuration</span>
+                <span>Connect your React Vercel frontend to your live Render Express API backend.</span>
+              </div>
             </div>
+            
+            <button
+              onClick={fetchData}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40 transition-colors shrink-0 flex items-center space-x-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Retry Request</span>
+            </button>
           </div>
-          <button
-            onClick={fetchData}
-            className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40 transition-colors shrink-0 ml-3"
-          >
-            Retry Now
-          </button>
+
+          {/* Form to paste Render backend URL directly */}
+          <form onSubmit={handleSaveBackendUrl} className="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative w-full">
+              <Link2 className="w-4 h-4 text-amber-400 absolute left-3 top-2.5" />
+              <input
+                type="url"
+                required
+                value={inputBackendUrl}
+                onChange={(e) => setInputBackendUrl(e.target.value)}
+                placeholder="https://your-backend-name.onrender.com"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-mono"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shrink-0 transition-colors flex items-center justify-center space-x-1"
+            >
+              {urlSavedSuccess ? <Check className="w-4 h-4" /> : null}
+              <span>{urlSavedSuccess ? 'Connected!' : 'Save Backend URL'}</span>
+            </button>
+          </form>
         </div>
       )}
 
