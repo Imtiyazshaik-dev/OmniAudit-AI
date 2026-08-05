@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../api/axios';
 import { 
   FileSpreadsheet, 
   Download, 
@@ -8,7 +8,10 @@ import {
   Layers, 
   PieChart, 
   CheckCircle2, 
-  AlertTriangle 
+  AlertTriangle,
+  FileMinus,
+  FilePlus,
+  FileText
 } from 'lucide-react';
 
 export default function GstrSummaryView() {
@@ -34,14 +37,17 @@ export default function GstrSummaryView() {
     const metrics = data.metrics;
     const csvContent = [
       ['Metric', 'Value (INR / Count)'],
-      ['Total Audited Invoices', metrics.totalInvoices],
-      ['Compliance Rate (%)', metrics.complianceRate + '%'],
-      ['Total Subtotal Taxable Value', metrics.totalSubtotal],
-      ['Total CGST', metrics.totalCgst],
-      ['Total SGST', metrics.totalSgst],
-      ['Total IGST', metrics.totalIgst],
-      ['Total Tax Liability', metrics.totalTaxLiability],
-      ['Total Grand Amount', metrics.totalGrandTotal]
+      ['Total Audited Invoices', metrics.totalInvoices || 0],
+      ['Standard Invoices Count', metrics.invoiceCount || 0],
+      ['Credit Notes Count', metrics.creditNoteCount || 0],
+      ['Debit Notes Count', metrics.debitNoteCount || 0],
+      ['Compliance Rate (%)', (metrics.complianceRate || 100) + '%'],
+      ['Total Subtotal Taxable Value', metrics.totalSubtotal || 0],
+      ['Total CGST', metrics.totalCgst || 0],
+      ['Total SGST', metrics.totalSgst || 0],
+      ['Total IGST', metrics.totalIgst || 0],
+      ['Total Tax Liability', metrics.totalTaxLiability || 0],
+      ['Total Net Grand Amount', metrics.totalGrandTotal || 0]
     ].map(e => e.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -53,6 +59,8 @@ export default function GstrSummaryView() {
   };
 
   const metrics = data?.metrics || {};
+  const hsnList = data?.hsnSummary || [];
+  const vendorList = data?.vendorSummary || [];
 
   return (
     <div className="space-y-8 pb-12">
@@ -62,11 +70,11 @@ export default function GstrSummaryView() {
           <span className="px-2.5 py-0.5 text-xs font-mono font-bold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             MONTHLY GSTR FILING RECONCILIATION
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-2">
-            GSTR-1 & GSTR-2 Summary Dashboard
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-2 font-sans">
+            GSTR-1 &amp; GSTR-2 Summary Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            Aggregated taxable values, CGST/SGST/IGST breakdown, and HSN-wise tax compliance reporting.
+            Aggregated taxable values, CGST/SGST/IGST breakdown, and Credit/Debit Note adjustments.
           </p>
         </div>
 
@@ -79,14 +87,56 @@ export default function GstrSummaryView() {
         </button>
       </div>
 
+      {/* Document Type Breakdown Cards (Invoices, Credit Notes, Debit Notes) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Standard Tax Invoices</span>
+              <span className="text-xl font-bold text-white font-mono">{metrics.invoiceCount || 0}</span>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-indigo-400 font-bold">Billing (+)</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <FileMinus className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Credit Notes</span>
+              <span className="text-xl font-bold text-amber-400 font-mono">{metrics.creditNoteCount || 0}</span>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-amber-400 font-bold">Tax Credit (-)</span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <FilePlus className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Debit Notes</span>
+              <span className="text-xl font-bold text-blue-400 font-mono">{metrics.debitNoteCount || 0}</span>
+            </div>
+          </div>
+          <span className="text-xs font-mono text-blue-400 font-bold">Surcharge (+)</span>
+        </div>
+      </div>
+
       {/* Primary Tax Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bento-card bg-zinc-900/80 border-indigo-500/30">
-          <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase">TOTAL TAXABLE SUB-TOTAL</span>
+          <span className="text-[11px] font-mono font-bold text-zinc-400 uppercase">NET TAXABLE SUB-TOTAL</span>
           <div className="text-2xl font-bold text-white font-mono mt-2">
             ₹{(metrics.totalSubtotal || 0).toLocaleString('en-IN')}
           </div>
-          <span className="text-[11px] text-zinc-400 mt-1 block">Net Taxable Value</span>
+          <span className="text-[11px] text-zinc-400 mt-1 block">Adjusted Net Taxable Value</span>
         </div>
 
         <div className="bento-card bg-zinc-900/80 border-indigo-500/30">
@@ -129,20 +179,26 @@ export default function GstrSummaryView() {
               <thead className="bg-zinc-900 text-zinc-400 font-mono border-b border-zinc-800">
                 <tr>
                   <th className="p-3">HSN/SAC CODE</th>
-                  <th className="p-3 text-right">LINE ITEMS</th>
-                  <th className="p-3 text-right">TOTAL VALUE</th>
+                  <th className="p-3 text-right">ITEM QTY</th>
+                  <th className="p-3 text-right">NET VALUE</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60 text-zinc-200">
-                {data?.hsnSummary?.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-zinc-900/40">
-                    <td className="p-3 font-mono text-indigo-400 font-bold">{item.code}</td>
-                    <td className="p-3 text-right font-mono">{item.count}</td>
-                    <td className="p-3 text-right font-mono font-bold text-white">
-                      ₹{item.totalValue.toLocaleString('en-IN')}
-                    </td>
+                {hsnList.length === 0 ? (
+                  <tr>
+                    <td colSpan="3" className="p-4 text-center text-zinc-500 text-xs">No HSN data found</td>
                   </tr>
-                ))}
+                ) : (
+                  hsnList.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-zinc-900/40">
+                      <td className="p-3 font-mono text-indigo-400 font-bold">{item.hsnCode}</td>
+                      <td className="p-3 text-right font-mono">{item.count}</td>
+                      <td className="p-3 text-right font-mono font-bold text-white">
+                        ₹{(item.totalAmount || 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -161,21 +217,27 @@ export default function GstrSummaryView() {
                 <tr>
                   <th className="p-3">VENDOR NAME</th>
                   <th className="p-3">GSTIN</th>
-                  <th className="p-3 text-right">INVOICES</th>
-                  <th className="p-3 text-right">TOTAL SPEND</th>
+                  <th className="p-3 text-right">DOCS</th>
+                  <th className="p-3 text-right">NET VALUE</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/60 text-zinc-200">
-                {data?.topVendors?.map((v, idx) => (
-                  <tr key={idx} className="hover:bg-zinc-900/40">
-                    <td className="p-3 font-semibold text-white">{v.vendorName}</td>
-                    <td className="p-3 font-mono text-zinc-400">{v.gstin || 'N/A'}</td>
-                    <td className="p-3 text-right font-mono">{v.count}</td>
-                    <td className="p-3 text-right font-mono font-bold text-white">
-                      ₹{v.totalAmount.toLocaleString('en-IN')}
-                    </td>
+                {vendorList.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="p-4 text-center text-zinc-500 text-xs">No vendor data found</td>
                   </tr>
-                ))}
+                ) : (
+                  vendorList.map((v, idx) => (
+                    <tr key={idx} className="hover:bg-zinc-900/40">
+                      <td className="p-3 font-semibold text-white">{v.vendorName}</td>
+                      <td className="p-3 font-mono text-zinc-400">{v.gstin || 'N/A'}</td>
+                      <td className="p-3 text-right font-mono">{v.count}</td>
+                      <td className="p-3 text-right font-mono font-bold text-white">
+                        ₹{(v.totalValue || 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -16,6 +16,13 @@ const invoiceSchema = new mongoose.Schema(
       required: false
     },
     originalFilename: String,
+    documentType: {
+      type: String,
+      enum: ['INVOICE', 'CREDIT_NOTE', 'DEBIT_NOTE'],
+      default: 'INVOICE'
+    },
+    originalInvoiceNumber: String,
+    originalInvoiceDate: String,
     vendorName: {
       type: String,
       default: 'Unknown Vendor'

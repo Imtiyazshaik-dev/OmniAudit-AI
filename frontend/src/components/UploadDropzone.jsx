@@ -8,9 +8,11 @@ import {
   Loader2, 
   Zap,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  FileMinus,
+  FilePlus
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../api/axios';
 
 export default function UploadDropzone({ onAuditComplete }) {
   const [dragActive, setDragActive] = useState(false);
@@ -48,7 +50,7 @@ export default function UploadDropzone({ onAuditComplete }) {
   const handleFileSelected = (file) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
-      setErrorMsg('Invalid file type. Please upload a PNG, JPG, WEBP, or PDF invoice document.');
+      setErrorMsg('Invalid file type. Please upload a PNG, JPG, WEBP, or PDF document.');
       return;
     }
     setErrorMsg('');
@@ -70,7 +72,7 @@ export default function UploadDropzone({ onAuditComplete }) {
       setProcessingStage('Executing GST State Code matching & Tax Split Engine...');
       await new Promise(r => setTimeout(r, 600));
 
-      setProcessingStage('Verifying line item totals & persisting audit log...');
+      setProcessingStage('Verifying document type (Invoice / Credit Note / Debit Note) & persisting log...');
       
       let response;
       if (sampleType) {
@@ -88,7 +90,7 @@ export default function UploadDropzone({ onAuditComplete }) {
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setErrorMsg(err.response?.data?.error || 'Failed to process and audit invoice document.');
+      setErrorMsg(err.response?.data?.error || 'Failed to process and audit document.');
     } finally {
       setIsProcessing(false);
       setProcessingStage('');
@@ -131,7 +133,7 @@ export default function UploadDropzone({ onAuditComplete }) {
 
           <div>
             <h3 className="text-lg font-bold text-white tracking-tight">
-              {selectedFile ? selectedFile.name : 'Drop your Invoice image or PDF here'}
+              {selectedFile ? selectedFile.name : 'Drop your Invoice, Credit Note, or Debit Note (Image/PDF)'}
             </h3>
             <p className="text-xs text-zinc-400 mt-1">
               Supports PNG, JPG, WEBP, and PDF up to 10MB
@@ -183,26 +185,26 @@ export default function UploadDropzone({ onAuditComplete }) {
         </div>
       )}
 
-      {/* 1-Click Sample Invoice Test Buttons */}
+      {/* 1-Click Sample Test Buttons (Invoices, Credit Notes, Debit Notes) */}
       <div className="mt-6 p-5 rounded-2xl bg-zinc-900/50 border border-zinc-800/80">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold text-zinc-300 flex items-center space-x-1.5 font-mono">
             <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>TRY WITH SAMPLE INVOICE (1-CLICK DEMO)</span>
+            <span>TRY WITH SAMPLE DOCUMENT (1-CLICK DEMO)</span>
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <button
             onClick={() => processUpload(null, 'intrastate')}
             disabled={isProcessing}
             className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/50 text-left group transition-all"
           >
             <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
-              <span>Intrastate (MH &rarr; MH)</span>
+              <span>Intrastate</span>
               <CheckCircle2 className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Splits 50% CGST + 50% SGST</p>
+            <p className="text-[10px] text-zinc-400 mt-1">Invoice (50-50 Split)</p>
           </button>
 
           <button
@@ -211,22 +213,46 @@ export default function UploadDropzone({ onAuditComplete }) {
             className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-blue-500/50 text-left group transition-all"
           >
             <div className="flex items-center justify-between text-xs font-bold text-blue-400">
-              <span>Interstate (KA &rarr; MH)</span>
+              <span>Interstate</span>
               <CheckCircle2 className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Routes 100% Tax to IGST</p>
+            <p className="text-[10px] text-zinc-400 mt-1">Invoice (100% IGST)</p>
+          </button>
+
+          <button
+            onClick={() => processUpload(null, 'credit_note')}
+            disabled={isProcessing}
+            className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-amber-500/50 text-left group transition-all"
+          >
+            <div className="flex items-center justify-between text-xs font-bold text-amber-400">
+              <span>Credit Note (-)</span>
+              <FileMinus className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-1">Reduces tax liability</p>
+          </button>
+
+          <button
+            onClick={() => processUpload(null, 'debit_note')}
+            disabled={isProcessing}
+            className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-indigo-500/50 text-left group transition-all"
+          >
+            <div className="flex items-center justify-between text-xs font-bold text-indigo-400">
+              <span>Debit Note (+)</span>
+              <FilePlus className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
+            </div>
+            <p className="text-[10px] text-zinc-400 mt-1">Increases tax liability</p>
           </button>
 
           <button
             onClick={() => processUpload(null, 'mismatch')}
             disabled={isProcessing}
-            className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-rose-500/50 text-left group transition-all"
+            className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-rose-500/50 text-left group transition-all col-span-2 sm:col-span-1"
           >
             <div className="flex items-center justify-between text-xs font-bold text-rose-400">
-              <span>Tax Mismatch Invoice</span>
+              <span>Tax Mismatch</span>
               <AlertCircle className="w-3.5 h-3.5 opacity-80 group-hover:scale-110 transition-transform" />
             </div>
-            <p className="text-[11px] text-zinc-400 mt-1">Flags tax routing error &amp; arithmetic</p>
+            <p className="text-[10px] text-zinc-400 mt-1">Flags tax error</p>
           </button>
         </div>
       </div>

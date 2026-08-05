@@ -64,6 +64,9 @@ router.post('/upload', authenticateToken, upload.single('invoice'), async (req, 
     const invoiceRecord = new Invoice({
       userId: userIdToSave,
       originalFilename: filename,
+      documentType: rawExtraction.documentType || 'INVOICE',
+      originalInvoiceNumber: rawExtraction.originalInvoiceNumber || '',
+      originalInvoiceDate: rawExtraction.originalInvoiceDate || '',
       vendorName: rawExtraction.vendorName || 'Unknown Vendor',
       supplierGSTIN: rawExtraction.supplierGSTIN || '',
       recipientGSTIN: rawExtraction.recipientGSTIN || '',
@@ -83,7 +86,7 @@ router.post('/upload', authenticateToken, upload.single('invoice'), async (req, 
     await invoiceRecord.save();
 
     return res.status(201).json({
-      message: 'Invoice processed and audited successfully.',
+      message: 'Document processed and audited successfully.',
       invoice: invoiceRecord,
       auditReport
     });
@@ -99,11 +102,15 @@ router.post('/upload', authenticateToken, upload.single('invoice'), async (req, 
  */
 router.get('/history', authenticateToken, async (req, res) => {
   try {
-    const { status, search, limit = 50 } = req.query;
+    const { status, docType, search, limit = 50 } = req.query;
     const query = getUserQuery(req.user);
 
     if (status && status !== 'ALL') {
       query.auditStatus = status;
+    }
+
+    if (docType && docType !== 'ALL') {
+      query.documentType = docType;
     }
 
     if (search) {
@@ -127,7 +134,7 @@ router.get('/history', authenticateToken, async (req, res) => {
 
 /**
  * GET /api/audit/summary
- * GSTR-1 & GSTR-2 Monthly Tax Breakdown & Compliance Metrics
+ * GSTR-1 & GSTR-2 Monthly Tax Breakdown & Compliance Metrics (Accounts for Invoices, Debit Notes & Credit Notes)
  */
 router.get('/summary', authenticateToken, async (req, res) => {
   try {
@@ -142,15 +149,26 @@ router.get('/summary', authenticateToken, async (req, res) => {
     let passedCount = 0;
     let flaggedCount = 0;
 
+    let invoiceCount = 0;
+    let creditNoteCount = 0;
+    let debitNoteCount = 0;
+
     const hsnSummaryMap = {};
     const vendorSummaryMap = {};
 
     invoices.forEach(inv => {
-      totalSubtotal += inv.amounts?.subtotal || 0;
-      totalCgst += inv.calculatedTaxSplit?.cgst || 0;
-      totalSgst += inv.calculatedTaxSplit?.sgst || 0;
-      totalIgst += inv.calculatedTaxSplit?.igst || 0;
-      totalTaxableGrand += inv.amounts?.grandTotal || 0;
+      const isCreditNote = inv.documentType === 'CREDIT_NOTE';
+      const multiplier = isCreditNote ? -1 : 1;
+
+      if (inv.documentType === 'CREDIT_NOTE') creditNoteCount++;
+      else if (inv.documentType === 'DEBIT_NOTE') debitNoteCount++;
+      else invoiceCount++;
+
+      totalSubtotal += (inv.amounts?.subtotal || 0) * multiplier;
+      totalCgst += (inv.calculatedTaxSplit?.cgst || 0) * multiplier;
+      totalSgst += (inv.calculatedTaxSplit?.sgst || 0) * multiplier;
+      totalIgst += (inv.calculatedTaxSplit?.igst || 0) * multiplier;
+      totalTaxableGrand += (inv.amounts?.grandTotal || 0) * multiplier;
 
       if (inv.auditStatus === 'PASSED') {
         passedCount++;
@@ -158,54 +176,67 @@ router.get('/summary', authenticateToken, async (req, res) => {
         flaggedCount++;
       }
 
-      // HSN aggregation
-      if (Array.isArray(inv.lineItems)) {
-        inv.lineItems.forEach(item => {
-          const code = item.hsnSac || 'General/Unclassified';
-          if (!hsnSummaryMap[code]) {
-            hsnSummaryMap[code] = { code, totalValue: 0, count: 0 };
-          }
-          hsnSummaryMap[code].totalValue += item.total || 0;
-          hsnSummaryMap[code].count += 1;
-        });
-      }
-
-      // Vendor aggregation
-      const vName = inv.vendorName || 'Unknown';
+      // Vendor summary
+      const vName = inv.vendorName || 'Unknown Vendor';
       if (!vendorSummaryMap[vName]) {
-        vendorSummaryMap[vName] = { vendorName: vName, gstin: inv.supplierGSTIN, count: 0, totalAmount: 0 };
+        vendorSummaryMap[vName] = { count: 0, totalValue: 0, gstin: inv.supplierGSTIN };
       }
       vendorSummaryMap[vName].count += 1;
-      vendorSummaryMap[vName].totalAmount += inv.amounts?.grandTotal || 0;
+      vendorSummaryMap[vName].totalValue += (inv.amounts?.grandTotal || 0) * multiplier;
+
+      // HSN summary
+      if (Array.isArray(inv.lineItems)) {
+        inv.lineItems.forEach(item => {
+          const code = item.hsnSac || 'UNSPECIFIED';
+          if (!hsnSummaryMap[code]) {
+            hsnSummaryMap[code] = { count: 0, totalAmount: 0 };
+          }
+          hsnSummaryMap[code].count += (item.qty || 1);
+          hsnSummaryMap[code].totalAmount += (item.total || 0) * multiplier;
+        });
+      }
     });
 
-    const totalCount = invoices.length;
-    const complianceRate = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 100;
+    const totalInvoices = invoices.length;
+    const complianceRate = totalInvoices > 0 
+      ? Math.round((passedCount / totalInvoices) * 100) 
+      : 100;
 
     return res.json({
       metrics: {
-        totalInvoices: totalCount,
+        totalInvoices,
+        invoiceCount,
+        creditNoteCount,
+        debitNoteCount,
         passedCount,
         flaggedCount,
         complianceRate,
-        totalSubtotal: Math.round(totalSubtotal * 100) / 100,
-        totalCgst: Math.round(totalCgst * 100) / 100,
-        totalSgst: Math.round(totalSgst * 100) / 100,
-        totalIgst: Math.round(totalIgst * 100) / 100,
-        totalTaxLiability: Math.round((totalCgst + totalSgst + totalIgst) * 100) / 100,
-        totalGrandTotal: Math.round(totalTaxableGrand * 100) / 100
+        totalSubtotal,
+        totalCgst,
+        totalSgst,
+        totalIgst,
+        totalTaxLiability: totalCgst + totalSgst + totalIgst,
+        totalGrandTotal: totalTaxableGrand
       },
-      hsnSummary: Object.values(hsnSummaryMap),
-      topVendors: Object.values(vendorSummaryMap).sort((a, b) => b.totalAmount - a.totalAmount).slice(0, 5)
+      hsnSummary: Object.entries(hsnSummaryMap).map(([hsnCode, data]) => ({
+        hsnCode,
+        count: data.count,
+        totalAmount: data.totalAmount
+      })),
+      vendorSummary: Object.entries(vendorSummaryMap).map(([vendorName, data]) => ({
+        vendorName,
+        gstin: data.gstin,
+        count: data.count,
+        totalValue: data.totalValue
+      })).sort((a, b) => b.totalValue - a.totalValue).slice(0, 5)
     });
   } catch (err) {
     console.error("Summary Error:", err);
-    return res.status(500).json({ error: 'Failed to generate GSTR summary' });
+    return res.status(500).json({ error: 'Failed to calculate GSTR summary' });
   }
 });
 
 /**
- * POST & DELETE /api/audit/clear-all
  * Purges invoices matching active user or unassigned demo records
  */
 const clearAllHandler = async (req, res) => {
@@ -245,12 +276,19 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
 /**
  * POST /api/audit/seed-demo
+ * Seeds demo set including Invoices, Credit Notes, and Debit Notes
  */
 router.post('/seed-demo', authenticateToken, async (req, res) => {
   try {
     const isValidUserId = req.user && req.user.id !== 'demo_user_id' && mongoose.Types.ObjectId.isValid(req.user.id);
     const userIdToSave = isValidUserId ? req.user.id : null;
-    const sampleFiles = ['sample_intrastate.pdf', 'sample_interstate.pdf', 'sample_mismatch.pdf'];
+    const sampleFiles = [
+      'sample_intrastate.pdf', 
+      'sample_interstate.pdf', 
+      'sample_mismatch.pdf',
+      'sample_credit_note.pdf',
+      'sample_debit_note.pdf'
+    ];
     const createdRecords = [];
 
     for (const filename of sampleFiles) {
@@ -260,6 +298,9 @@ router.post('/seed-demo', authenticateToken, async (req, res) => {
       const record = new Invoice({
         userId: userIdToSave,
         originalFilename: filename,
+        documentType: raw.documentType || 'INVOICE',
+        originalInvoiceNumber: raw.originalInvoiceNumber || '',
+        originalInvoiceDate: raw.originalInvoiceDate || '',
         vendorName: raw.vendorName,
         supplierGSTIN: raw.supplierGSTIN,
         recipientGSTIN: raw.recipientGSTIN,
@@ -280,7 +321,11 @@ router.post('/seed-demo', authenticateToken, async (req, res) => {
       createdRecords.push(record);
     }
 
-    return res.json({ message: 'Demo data seeded successfully', count: createdRecords.length, invoices: createdRecords });
+    return res.status(201).json({
+      message: 'Demo dataset (Invoices, Credit Notes & Debit Notes) seeded successfully.',
+      count: createdRecords.length,
+      invoices: createdRecords
+    });
   } catch (err) {
     console.error("Seed Demo Error:", err);
     return res.status(500).json({ error: 'Failed to seed demo data' });
