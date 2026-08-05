@@ -9,7 +9,6 @@ import {
   ShieldCheck, 
   User, 
   LogOut, 
-  Sparkles,
   Building2,
   LogIn,
   ChevronDown,
@@ -99,7 +98,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Navigation Links - HIDDEN on isolated login/register pages */}
+        {/* Navigation Links - ONLY ONE SINGLE HIGHLIGHT ACTIVE AT ANY TIME */}
         {!isAuthPage && (
           <nav className="hidden md:flex items-center space-x-1 bg-zinc-900/60 p-1.5 rounded-xl border border-zinc-800/60">
             <Link
@@ -157,19 +156,6 @@ export default function Navbar() {
           
           {!isAuthPage && (
             <>
-              {/* Dynamic Audit Invoice Button - ONLY highlights when on /upload route */}
-              <Link
-                to="/upload"
-                className={`hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                  isActive('/upload')
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-glow-indigo scale-105'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white'
-                }`}
-              >
-                <Sparkles className={`w-3.5 h-3.5 ${isActive('/upload') ? 'text-indigo-200' : 'text-indigo-400'}`} />
-                <span>Audit Invoice</span>
-              </Link>
-
               {/* DYNAMIC User Org State Badge */}
               <div 
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
