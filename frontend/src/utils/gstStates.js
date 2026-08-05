@@ -1,0 +1,43 @@
+export const INDIAN_GST_STATES = [
+  { code: "01", name: "Jammu and Kashmir", short: "JK" },
+  { code: "02", name: "Himachal Pradesh", short: "HP" },
+  { code: "03", name: "Punjab", short: "PB" },
+  { code: "04", name: "Chandigarh", short: "CH" },
+  { code: "05", name: "Uttarakhand", short: "UK" },
+  { code: "06", name: "Haryana", short: "HR" },
+  { code: "07", name: "Delhi", short: "DL" },
+  { code: "08", name: "Rajasthan", short: "RJ" },
+  { code: "09", name: "Uttar Pradesh", short: "UP" },
+  { code: "10", name: "Bihar", short: "BR" },
+  { code: "11", name: "Sikkim", short: "SK" },
+  { code: "12", name: "Arunachal Pradesh", short: "AR" },
+  { code: "13", name: "Nagaland", short: "NL" },
+  { code: "14", name: "Manipur", short: "MN" },
+  { code: "15", name: "Mizoram", short: "MZ" },
+  { code: "16", name: "Tripura", short: "TR" },
+  { code: "17", name: "Meghalaya", short: "ML" },
+  { code: "18", name: "Assam", short: "AS" },
+  { code: "19", name: "West Bengal", short: "WB" },
+  { code: "20", name: "Jharkhand", short: "JH" },
+  { code: "21", name: "Odisha", short: "OR" },
+  { code: "22", name: "Chhattisgarh", short: "CG" },
+  { code: "23", name: "Madhya Pradesh", short: "MP" },
+  { code: "24", name: "Gujarat", short: "GJ" },
+  { code: "26", name: "Dadra & Nagar Haveli and Daman & Diu", short: "DD" },
+  { code: "27", name: "Maharashtra", short: "MH" },
+  { code: "28", name: "Andhra Pradesh", short: "AP" },
+  { code: "29", name: "Karnataka", short: "KA" },
+  { code: "30", name: "Goa", short: "GA" },
+  { code: "31", name: "Lakshadweep", short: "LD" },
+  { code: "32", name: "Kerala", short: "KL" },
+  { code: "33", name: "Tamil Nadu", short: "TN" },
+  { code: "34", name: "Puducherry", short: "PY" },
+  { code: "35", name: "Andaman and Nicobar Islands", short: "AN" },
+  { code: "36", name: "Telangana", short: "TS" },
+  { code: "38", name: "Ladakh", short: "LA" },
+  { code: "97", name: "Other Territory", short: "OT" }
+];
+
+export function getStateByCode(code) {
+  return INDIAN_GST_STATES.find(s => s.code === code) || { code: code || "27", name: "Maharashtra", short: "MH" };
+}
