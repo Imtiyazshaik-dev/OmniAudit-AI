@@ -3,6 +3,9 @@ import axios from 'axios';
 // Function to update Base URL on the fly
 export function setBackendUrl(url) {
   let cleanUrl = (url || '').trim();
+  if (cleanUrl && !cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = `https://${cleanUrl}`;
+  }
   if (cleanUrl.endsWith('/')) {
     cleanUrl = cleanUrl.slice(0, -1);
   }
