@@ -34,7 +34,7 @@ console.assert(res2.isInterstate, "Test 2 Failed: Should be interstate");
 console.assert(res2.calculatedTaxSplit.igst === 9000, "Test 2 Failed: IGST math");
 console.log("✔ Test 2 Passed: Valid Interstate Invoice");
 
-// Test 3: Flanged Invoice - Interstate charged CGST/SGST instead of IGST
+// Test 3: Flagged Invoice - Interstate charged CGST/SGST instead of IGST
 const flawedInvoice1 = {
   supplierGSTIN: "27AAAAA0000A1Z5", // Maharashtra
   recipientGSTIN: "07DDDDD3333D4Z8", // Delhi (07)
@@ -61,5 +61,20 @@ const flawedInvoice2 = {
 const res4 = computeTaxSplit(flawedInvoice2);
 console.assert(res4.auditStatus === "FLAGGED_MISMATCH", "Test 4 Failed: Should flag arithmetic mismatch");
 console.log("✔ Test 4 Passed: Detected Stated vs Grand Total Arithmetic Discrepancy");
+
+// Test 5: Valid Amazon / B2B Tax-Inclusive Invoice (Subtotal: 305.93, IGST 18%: 55.07, Line Total: 361.00)
+const amazonInvoice = {
+  supplierGSTIN: "07AAAAA0000A1Z5", // Delhi
+  recipientGSTIN: "27BBBBB1111B2Z6", // Maharashtra
+  subtotal: 305.93,
+  totalTax: 55.07,
+  taxes: { cgst: 0, sgst: 0, igst: 55.07 },
+  grandTotal: 361.00,
+  lineItems: [{ price: 305.93, total: 361.00 }] // Gross line total matches grand total (361.00)
+};
+const res5 = computeTaxSplit(amazonInvoice);
+console.assert(res5.auditStatus === "PASSED", "Test 5 Failed: Amazon Tax-Inclusive invoice should pass");
+console.assert(res5.discrepancies.length === 0, "Test 5 Failed: Should have 0 discrepancies");
+console.log("✔ Test 5 Passed: Valid Amazon B2B Tax-Inclusive Pricing Invoice (305.93 + 55.07 = 361.00)");
 
 console.log("=== ALL GST ENGINE TESTS PASSED SUCCESSFULLY! ===");

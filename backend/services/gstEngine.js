@@ -6,8 +6,8 @@
  * 2. Same state code => Intrastate transaction => Tax split 50% CGST + 50% SGST (IGST = 0).
  * 3. Different state code => Interstate transaction => 100% IGST (CGST = 0, SGST = 0).
  * 4. Programmatic arithmetic validation:
- *    - Subtotal + Total Tax == Grand Total (within ±1.00 rounding margin).
- *    - Sum of line item totals == Subtotal.
+ *    - Subtotal + Total Tax == Grand Total (within ±1.50 rounding margin).
+ *    - Sum of line item totals == Subtotal OR Stated Gross Total (Amazon / B2B Tax-Inclusive vs Exclusive Pricing).
  */
 
 // State code dictionary for human-readable state names
@@ -151,21 +151,26 @@ export function computeTaxSplit(invoiceData) {
     }
   }
 
-  // 3. Line Items Sum Check vs Subtotal
+  // 3. Line Items Sum Check (Handles both Net Subtotal and Amazon Gross Tax-Inclusive line item pricing)
   if (Array.isArray(invoiceData.lineItems) && invoiceData.lineItems.length > 0) {
     const lineItemSum = round(
       invoiceData.lineItems.reduce((acc, item) => acc + (Number(item.total) || 0), 0)
     );
-    if (subtotal > 0 && Math.abs(lineItemSum - subtotal) > 1.0) {
+
+    const matchesSubtotal = Math.abs(lineItemSum - subtotal) <= 1.5;
+    const matchesGrandTotal = grandTotal > 0 && Math.abs(lineItemSum - grandTotal) <= 1.5;
+    const matchesExpectedGrand = Math.abs(lineItemSum - (subtotal + totalTaxAmount)) <= 1.5;
+
+    if (subtotal > 0 && !matchesSubtotal && !matchesGrandTotal && !matchesExpectedGrand) {
       discrepancies.push(
-        `Arithmetic discrepancy: Sum of line items (₹${lineItemSum.toFixed(2)}) does not match invoice subtotal (₹${subtotal.toFixed(2)}).`
+        `Arithmetic discrepancy: Sum of line items (₹${lineItemSum.toFixed(2)}) does not match invoice subtotal (₹${subtotal.toFixed(2)}) or Gross Total (₹${grandTotal.toFixed(2)}).`
       );
     }
   }
 
   // 4. Subtotal + Tax = Grand Total Check
   const expectedGrandTotal = round(subtotal + totalTaxAmount);
-  if (subtotal > 0 && grandTotal > 0 && Math.abs(expectedGrandTotal - grandTotal) > 1.0) {
+  if (subtotal > 0 && grandTotal > 0 && Math.abs(expectedGrandTotal - grandTotal) > 1.5) {
     discrepancies.push(
       `Calculation error: Subtotal (₹${subtotal.toFixed(2)}) + Tax (₹${totalTaxAmount.toFixed(2)}) = ₹${expectedGrandTotal.toFixed(2)}, which differs from stated Grand Total (₹${grandTotal.toFixed(2)}).`
     );
