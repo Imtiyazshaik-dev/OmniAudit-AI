@@ -92,7 +92,7 @@ export function computeTaxSplit(invoiceData) {
     supplierStateCode !== recipientStateCode
   );
 
-  const subtotal = round(invoiceData.subtotal);
+  let subtotal = round(invoiceData.subtotal);
   const extractedTaxAmount = round(invoiceData.totalTax || invoiceData.taxes?.total || 0);
   const grandTotal = round(invoiceData.grandTotal);
 
@@ -105,6 +105,15 @@ export function computeTaxSplit(invoiceData) {
   let totalTaxAmount = extractedTaxAmount;
   if (!totalTaxAmount && (extractedCgst || extractedSgst || extractedIgst)) {
     totalTaxAmount = round(extractedCgst + extractedSgst + extractedIgst);
+  }
+
+  // AUTOMATIC AMAZON / E-COMMERCE SUBTOTAL NORMALIZATION:
+  // If subtotal is missing (0) OR subtotal was mis-extracted as equal to grandTotal (while tax > 0),
+  // calculate true net subtotal = grandTotal - totalTaxAmount (e.g. 361.00 - 55.07 = 305.93)
+  if (grandTotal > 0 && totalTaxAmount > 0) {
+    if (subtotal === 0 || Math.abs(subtotal - grandTotal) <= 1.5) {
+      subtotal = round(grandTotal - totalTaxAmount);
+    }
   }
 
   // Calculate expected tax split based on GST Law

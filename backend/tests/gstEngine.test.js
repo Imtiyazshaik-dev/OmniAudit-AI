@@ -62,19 +62,24 @@ const res4 = computeTaxSplit(flawedInvoice2);
 console.assert(res4.auditStatus === "FLAGGED_MISMATCH", "Test 4 Failed: Should flag arithmetic mismatch");
 console.log("✔ Test 4 Passed: Detected Stated vs Grand Total Arithmetic Discrepancy");
 
-// Test 5: Valid Amazon / B2B Tax-Inclusive Invoice (Subtotal: 305.93, IGST 18%: 55.07, Line Total: 361.00)
-const amazonInvoice = {
-  supplierGSTIN: "07AAAAA0000A1Z5", // Delhi
-  recipientGSTIN: "27BBBBB1111B2Z6", // Maharashtra
-  subtotal: 305.93,
+// Test 5: Real Amazon Invoice Image uploaded by user (SAYY Rajasthan 08 -> Telangana 36)
+// Supplier: 08AFOFS5593K1Z1, Recipient: 36FMAPB6820G1ZD, Subtotal extracted as 361.00, Tax: 55.07 IGST, GrandTotal: 361.00
+const realAmazonInvoice = {
+  supplierGSTIN: "08AFOFS5593K1Z1", // Rajasthan (08)
+  recipientGSTIN: "36FMAPB6820G1ZD", // Telangana (36)
+  subtotal: 361.00, // Extracted as equal to Grand Total because Amazon TOTAL row omits Subtotal
   totalTax: 55.07,
   taxes: { cgst: 0, sgst: 0, igst: 55.07 },
   grandTotal: 361.00,
-  lineItems: [{ price: 305.93, total: 361.00 }] // Gross line total matches grand total (361.00)
+  lineItems: [
+    { description: "SAYY Moroccan DeTan Brightening Face Pack", qty: 1, price: 305.93, total: 361.00 },
+    { description: "Shipping Charges", qty: 0, price: 33.90, total: 0.00 }
+  ]
 };
-const res5 = computeTaxSplit(amazonInvoice);
-console.assert(res5.auditStatus === "PASSED", "Test 5 Failed: Amazon Tax-Inclusive invoice should pass");
-console.assert(res5.discrepancies.length === 0, "Test 5 Failed: Should have 0 discrepancies");
-console.log("✔ Test 5 Passed: Valid Amazon B2B Tax-Inclusive Pricing Invoice (305.93 + 55.07 = 361.00)");
+const res5 = computeTaxSplit(realAmazonInvoice);
+console.assert(res5.auditStatus === "PASSED", "Test 5 Failed: Real Amazon invoice should pass cleanly");
+console.assert(res5.amounts.subtotal === 305.93, "Test 5 Failed: Subtotal should normalize to 305.93");
+console.assert(res5.discrepancies.length === 0, "Test 5 Failed: Discrepancies should be empty");
+console.log("✔ Test 5 Passed: Real Amazon B2B Invoice (08 -> 36, Subtotal normalized to 305.93, IGST 55.07, Grand 361.00)");
 
 console.log("=== ALL GST ENGINE TESTS PASSED SUCCESSFULLY! ===");
